@@ -4,15 +4,12 @@
 class CCircleShape final : public CBaseShape
 {
 public:
-	CCircleShape(const sf::Vector2f& center, float radius);
+	CCircleShape(float centerX, float centerY, float radius);
 
-	double GetSquare() const override;
-	double GetPerimeter() const override;
+	float GetSquare() const;
+	float GetPerimeter() const;
 	void Draw(sf::RenderWindow& window) const override;
 	std::string ToString() const override;
-
 private:
-	sf::Vector2f m_center;
-	double m_radius;
+	sf::CircleShape m_circle;
 };
-

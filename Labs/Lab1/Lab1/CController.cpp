@@ -7,86 +7,39 @@ void CController::Run()
 	ReadShapesFromFile("input.txt");
 	WriteShapesToFile("output.txt");
 
+	sf::Event event;
 	while (m_window.isOpen())
 	{
-		HandleEvents();
-		DrawShapes();
-	}
-}
-
-sf::Vector2f CController::ParseCoordinates(const std::string & str)
-{
-	sf::Vector2f result(0.0f, 0.0f);
-	size_t equalPos = str.find('=');
-	if (equalPos != std::string::npos)
-	{
-		result.x = std::stof(str.substr(equalPos + 1));
-		size_t commaPos = str.find(',', equalPos);
-		if (commaPos != std::string::npos)
+		while (m_window.pollEvent(event))
 		{
-			result.y = std::stof(str.substr(commaPos + 1));
+			if (event.type == sf::Event::Closed)
+				m_window.close();
 		}
+
+		m_window.clear();
+
+		for (const auto& shape : m_shapes)
+		{
+			shape->Draw(m_window);
+		}
+
+		m_window.display();
 	}
-	return result;
 }
 
-void CController::ReadShapesFromFile(const std::string& fileName)
+void CController::ReadShapesFromFile(const std::string& filename)
 {
-	std::ifstream input(fileName);
-	if (!input)
+	std::ifstream inputFile(filename);
+	if (!inputFile.is_open())
 	{
-		std::cerr << "Ошибка при открытии файла" << fileName << std::endl;
+		std::cerr << "Failed to open file: " << filename << std::endl;
 		return;
 	}
 
 	std::string line;
-	while (std::getline(input, line))
+	while (std::getline(inputFile, line))
 	{
-		std::istringstream iss(line);
-		std::string type;
-		iss >> type;
-
-		if (type == "CIRCLE:")
-		{
-			sf::Vector2f center;
-			float radius;
-
-			std::string centerStr, radiusStr;
-			iss >> centerStr >> radiusStr;
-
-			center = ParseCoordinates(centerStr);
-
-			size_t radiusPos = radiusStr.find('=');
-			if (radiusPos != std::string::npos)
-				radius = std::stof(radiusStr.substr(radiusPos + 1));
-
-			m_shapes.push_back(std::make_unique<CCircleShape>(center, radius));
-		}
-		if (type == "TRIANGLE:")
-		{
-			sf::Vector2f p1, p2, p3;
-
-			std::string p1Str, p2Str, p3Str;
-			iss >> p1Str >> p2Str >> p3Str;
-			
-			p1 = ParseCoordinates(p1Str);
-			p2 = ParseCoordinates(p2Str);
-			p3 = ParseCoordinates(p3Str);
-
-			m_shapes.push_back(std::make_unique<CTriangleShape>(p1, p2, p3));
-		}
-		if (type == "RECTANGLE:")
-		{
-			sf::Vector2f p1, p2;
-
-			std::string p1Str, p2Str;
-			iss >> p1Str >> p2Str;
-
-			p1 = ParseCoordinates(p1Str);
-			p2 = ParseCoordinates(p2Str);
-
-			m_shapes.push_back(std::make_unique<CRectangleShape>(p1, p2));
-		}
+		ProcessLine(line);
 	}
 }
 
@@ -95,7 +48,7 @@ void CController::WriteShapesToFile(const std::string& fileName)
 	std::ofstream output(fileName);
 	if (!output)
 	{
-		std::cerr << "Ошибка при открытии файла" << fileName << std::endl;
+		std::cerr << "Ошибка при открытии файла: " << fileName << std::endl;
 		return;
 	}
 	for (const auto& shape : m_shapes)
@@ -104,24 +57,92 @@ void CController::WriteShapesToFile(const std::string& fileName)
 	}
 }
 
-void CController::HandleEvents()
+void CController::ProcessLine(const std::string& line)
 {
-	sf::Event event;
-	while (m_window.pollEvent(event))
+	std::istringstream iss(line);
+	std::string shapeType;
+	iss >> shapeType;
+
+	if (shapeType == "TRIANGLE:")
 	{
-		if (event.type == sf::Event::Closed)
-			m_window.close();
+		ProcessTriangle(iss);
 	}
+	if (shapeType == "RECTANGLE:")
+	{
+		ProcessRectangle(iss);
+	}
+	if (shapeType == "CIRCLE:")
+	{
+		ProcessCircle(iss);
+	}
+}
+
+Point CController::ParsePointFromString(std::string& pointString)
+{
+	Point point;
+
+	size_t equalSignPos = pointString.find('=');
+	size_t commaPos = pointString.find(',');
+
+	if (equalSignPos != std::string::npos && commaPos != std::string::npos)
+	{
+		point.x = std::stof(pointString.substr(equalSignPos + 1, commaPos - equalSignPos - 1));
+		point.y = std::stof(pointString.substr(commaPos + 1));
+	}
+	else
+	{
+		std::cerr << "Error: Invalid point format: " << pointString << std::endl;
+		point.x = point.y = 0.0f;
+	}
+
+	return point;
+}
+
+void CController::ProcessTriangle(std::istringstream& iss)
+{
+	Point point1, point2, point3;
+	std::string pointString1, pointString2, pointString3;
+	iss >> pointString1 >> pointString2 >> pointString3;
+
+	point1 = ParsePointFromString(pointString1);
+	point2 = ParsePointFromString(pointString2);
+	point3 = ParsePointFromString(pointString3);
+
+	m_shapes.push_back(std::make_unique<CTriangleShape>(point1.x, point1.y, point2.x, point2.y, point3.x, point3.y));
+}
+
+void CController::ProcessRectangle(std::istringstream& iss)
+{
+	Point point1, point2;
+	std::string pointString1, pointString2;
+	iss >> pointString1 >> pointString2;
+
+	point1 = ParsePointFromString(pointString1);
+	point2 = ParsePointFromString(pointString2);
+
+	m_shapes.push_back(std::make_unique<CRectangleShape>(point1.x, point1.y, point2.x, point2.y));
+}
+
+void CController::ProcessCircle(std::istringstream& iss)
+{
+	Point centerPoint;
+	float radius;
+	std::string centerPointString, radiusString;
+	iss >> centerPointString >> radiusString;
+
+	size_t radiusPosition = radiusString.find('=');
+	if (radiusPosition != std::string::npos)
+		radius = std::stof(radiusString.substr(radiusPosition + 1));
+
+	centerPoint = ParsePointFromString(centerPointString);
+
+	m_shapes.push_back(std::make_unique<CCircleShape>(centerPoint.x, centerPoint.y, radius));
 }
 
 void CController::DrawShapes()
 {
-	m_window.clear();
-
 	for (const auto& shape : m_shapes)
 	{
 		shape->Draw(m_window);
 	}
-
-	m_window.display();
 }

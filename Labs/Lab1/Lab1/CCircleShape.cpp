@@ -1,24 +1,27 @@
 #include "CCircleShape.h"
 
-CCircleShape::CCircleShape(const sf::Vector2f& center, float radius)
-	: m_center(center), m_radius(radius) {}
-
-double CCircleShape::GetSquare() const
+CCircleShape::CCircleShape(float centerX, float centerY, float radius)
+	: m_circle(radius)
 {
-	return M_PI * m_radius * m_radius;
+	m_circle.setPosition(centerX - radius, centerY - radius);
+	m_circle.setFillColor(sf::Color::Red);
 }
 
-double CCircleShape::GetPerimeter() const
+float CCircleShape::GetSquare() const
 {
-	return 2 * M_PI * m_radius;
+	float radius = m_circle.getRadius();
+	return static_cast<float>(M_PI) * radius * radius;
 }
 
-void CCircleShape::Draw(sf::RenderWindow& window) const 
+float CCircleShape::GetPerimeter() const
 {
-	sf::CircleShape circle(m_radius);
-	circle.setPosition(m_center);
-	circle.setFillColor(sf::Color::Green);
-	window.draw(circle);
+	float radius = m_circle.getRadius();
+	return 2.0f * static_cast<float>(M_PI) * radius;
+}
+
+void CCircleShape::Draw(sf::RenderWindow& window) const
+{
+	window.draw(m_circle);
 }
 
 std::string CCircleShape::ToString() const 
